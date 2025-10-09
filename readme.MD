@@ -1,8 +1,8 @@
 # Illumio PCE Analyzer
 
-A professional web application for analyzing Illumio Policy Compute Engine (PCE) export data. Upload, visualize, filter, and explore relationships between workloads, labels, rulesets, services, IP lists, and label groups.
+A professional web application for analyzing Illumio Policy Compute Engine (PCE) export data. Upload, visualize, filter, and explore relationships between workloads, labels, rulesets, services, IP lists, and label groups with **persistent MongoDB storage** and version tracking.
 
-![Illumio PCE Analyzer](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js) ![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?style=flat-square&logo=typescript) ![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.1-38bdf8?style=flat-square&logo=tailwindcss)
+![Illumio PCE Analyzer](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js) ![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?style=flat-square&logo=typescript) ![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.1-38bdf8?style=flat-square&logo=tailwindcss) ![MongoDB](https://img.shields.io/badge/MongoDB-6.20-47A248?style=flat-square&logo=mongodb)
 
 ## Features
 
@@ -10,6 +10,8 @@ A professional web application for analyzing Illumio Policy Compute Engine (PCE)
 
 - **Drag-and-drop interface** for easy file uploads
 - **Automatic file type detection** for CSV and JSON formats
+- **MongoDB storage** with automatic version tracking
+- **Persistent data** across sessions
 - **Supported file types:**
   - CSV: Workloads, Labels, Services, IP Lists
   - JSON: Rulesets, Label Groups
@@ -21,6 +23,7 @@ A professional web application for analyzing Illumio Policy Compute Engine (PCE)
 - **Expandable JSON viewer** for ruleset and label group data
 - **Pagination indicators** showing data volume
 - **Professional monospace formatting** for data display
+- **Version information** for each upload
 
 ### Analysis & Filtering Tools
 
@@ -56,6 +59,7 @@ A professional web application for analyzing Illumio Policy Compute Engine (PCE)
 
 - **Framework:** Next.js 15 (App Router)
 - **Language:** TypeScript 5.7
+- **Database:** MongoDB 6.20
 - **Styling:** Tailwind CSS 4.1
 - **UI Components:** Radix UI primitives
 - **Charts:** Recharts 2.15
@@ -68,12 +72,12 @@ A professional web application for analyzing Illumio Policy Compute Engine (PCE)
 
 - Node.js 18.x or higher
 - npm, yarn, or pnpm package manager
+- **MongoDB Atlas account** or local MongoDB instance
+- MongoDB connection string
 
 ### Installation
 
 1. **Clone or download the project**
-
-\`\`\`bash
 
 # If using git
 
@@ -82,52 +86,63 @@ cd illumio-pce-analyzer
 
 # Or download and extract the ZIP file
 
-\`\`\`
+2. **Set up MongoDB**
 
-2. **Install dependencies**
+Create a MongoDB database with the following collections:
 
-\`\`\`bash
-npm install
+- \`workloads\`
+- \`labels\`
+- \`services\`
+- \`ip_lists\`
+- \`rulesets\`
+- \`label_groups\`
 
-# or
+**MongoDB Atlas Setup (Recommended):**
 
-yarn install
+- Go to [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+- Create a free cluster
+- Create a database named \`pce_data\`
+- Create the 6 collections listed above
+- Get your connection string from the "Connect" button
 
-# or
+3. **Configure environment variables**
 
-pnpm install
-\`\`\`
+Create a \`.env.local\` file in the root directory:
 
-3. **Run the development server**
+cp .env.example .env.local
 
-\`\`\`bash
-npm run dev
+Edit \`.env.local\` and add your MongoDB connection string:
 
-# or
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/pce_data
 
-yarn dev
+**Important:** Replace \`username\`, \`password\`, and \`cluster\` with your actual MongoDB credentials.
 
-# or
+4. **Install dependencies**
 
-pnpm dev
-\`\`\`
+**npm install**
+or
+**yarn install**
+or
+**pnpm install**
 
-4. **Open your browser**
+5. **Run the development server**
+
+**npm run dev**
+or
+**yarn dev**
+or
+**pnpm dev**
+
+6. **Open your browser**
 
 Navigate to [http://localhost:3000](http://localhost:3000) to see the application.
 
 ### Building for Production
 
-\`\`\`bash
-
-# Build the application
-
 npm run build
-
-# Start the production server
-
 npm run start
-\`\`\`
+
+**Note:** Make sure to set the \`MONGODB_URI\` environment variable in your production environment.
 
 ## Usage Guide
 
@@ -142,12 +157,16 @@ npm run start
   - **ip_lists.csv** - IP list definitions
   - **rulesets.json** - Ruleset configurations
   - **label_groups.json** - Label group definitions
+- Files are automatically uploaded to MongoDB with version tracking
+- Each upload creates a new version, preserving historical data
 
 ### 2. Preview Data
 
 - Click the **Preview** tab to view uploaded files
+- Data is loaded from MongoDB automatically
 - Expand cards to see data tables (CSV) or JSON structures
 - Review the first 10 rows/entries of each file
+- Version information is displayed for each file
 
 ### 3. Analyze & Filter
 
@@ -173,37 +192,70 @@ npm run start
 - Export chart data using the chart export buttons
 - Files download automatically to your default download folder
 
-## File Format Requirements
+## Data Storage & Versioning
 
-### CSV Files
+### MongoDB Collections
 
-All CSV files should have headers in the first row. Expected columns:
+Data is stored in MongoDB with the following structure:
 
-**workloads.csv:**
-\`\`\`csv
-hostname,ip_address,os_type,enforcement_mode,ven_status,environment,role,app,location
-\`\`\`
+**Collection Names:**
 
-**labels.csv:**
-\`\`\`csv
-key,value,description
-\`\`\`
+- \`workloads\` - Workload data from CSV uploads
+- \`labels\` - Label definitions from CSV uploads
+- \`services\` - Service definitions from CSV uploads
+- \`ip_lists\` - IP list data from CSV uploads
+- \`rulesets\` - Ruleset configurations from JSON uploads
+- \`label_groups\` - Label group definitions from JSON uploads
 
-**services.csv:**
-\`\`\`csv
-name,port,protocol,description
-\`\`\`
+**Document Structure:**
 
-**ip_lists.csv:**
-\`\`\`csv
-name,ip_ranges,description
-\`\`\`
+Each document contains the original data plus metadata:
+
+{
+// Original data fields
+"hostname": "web-server-01",
+"ip_address": "10.0.1.100",
+// ... other fields ...
+
+// Metadata fields (added automatically)
+"\_uploadId": "upload_1234567890_abc123",
+"\_uploadedAt": "2025-01-08T10:30:00.000Z",
+"\_version": 1,
+"\_fileName": "workloads.csv"
+}
+
+### Version Tracking
+
+- Each upload creates a new version number
+- Previous versions are preserved in the database
+- You can query specific versions using the API
+- Version history helps track changes over time
+
+### API Endpoints
+
+**Upload Data:**
+
+POST /api/upload
+Body: { fileType, data, fileName }
+
+**Fetch Data:**
+GET /api/data/[collection]?version=1
+
+**Get Versions:**
+GET /api/versions
 
 ## Project Structure
 
-\`\`\`
 illumio-pce-analyzer/
 ├── app/
+│ ├── api/
+│ │ ├── upload/
+│ │ │ └── route.ts # Upload API endpoint
+│ │ ├── data/
+│ │ │ └── [collection]/
+│ │ │ └── route.ts # Fetch data API endpoint
+│ │ └── versions/
+│ │ └── route.ts # Version tracking API
 │ ├── layout.tsx # Root layout with fonts
 │ ├── page.tsx # Main application page
 │ └── globals.css # Global styles and theme
@@ -217,25 +269,66 @@ illumio-pce-analyzer/
 │ ├── ruleset-details.tsx # Ruleset detail modal
 │ └── ui/ # Reusable UI components
 ├── lib/
+│ ├── mongodb.ts # MongoDB connection utility
 │ ├── utils.ts # Utility functions
 │ └── export-utils.ts # Export functionality
+├── .env.example # Environment variable template
+├── .env.local # Your local environment variables (create this)
 └── package.json # Dependencies and scripts
-\`\`\`
 
 ## Troubleshooting
 
+### MongoDB Connection Issues
+
+**Error: "Failed to connect to MongoDB"**
+
+- Verify your \`MONGODB_URI\` in \`.env.local\` is correct
+- Check that your IP address is whitelisted in MongoDB Atlas (Network Access)
+- Ensure your MongoDB user has read/write permissions
+- Test your connection string using MongoDB Compass
+
+**Error: "Database or collection not found"**
+
+- Verify the database name is \`pce_data\`
+- Ensure all 6 collections are created in MongoDB
+- Check collection names match exactly: \`workloads\`, \`labels\`, \`services\`, \`ip_lists\`, \`rulesets\`, \`label_groups\`
+
 ### Files not uploading
 
+- Check browser console for error messages
 - Ensure files are in the correct format (CSV or JSON)
-- Check that CSV files have proper headers
-- Verify JSON files are valid JSON format
+- Verify CSV files have proper headers
+- Confirm JSON files are valid JSON format
+- Check MongoDB connection is active
 
-### Charts not displaying
+### Data not loading
 
-- Ensure workloads.csv and rulesets.json are uploaded
-- Check that data contains the required fields (environment, services)
+- Verify MongoDB connection string is set correctly
+- Check that data was successfully uploaded (check MongoDB Atlas dashboard)
+- Look for error messages in the browser console
+- Ensure the API routes are accessible
 
-### Relationships not showing
+## Environment Variables
 
-- Upload all related files (workloads, labels, rulesets)
-- Ensure label references in rulesets match labels in workloads
+| Variable        | Description               | Required |
+| --------------- | ------------------------- | -------- |
+| \`MONGODB_URI\` | MongoDB connection string | Yes      |
+
+**Example:**
+MONGODB_URI=mongodb+srv://user:password@cluster.mongodb.net/pce_data
+
+## Security Notes
+
+- Never commit \`.env.local\` to version control
+- Keep your MongoDB credentials secure
+- Use MongoDB Atlas IP whitelisting for additional security
+- Consider using MongoDB user roles with minimal required permissions
+- In production, use environment variables provided by your hosting platform
+
+## License
+
+This project is provided as-is for analyzing Illumio PCE export data.
+
+## Support
+
+For issues or questions, please refer to the Illumio PCE documentation or contact your Illumio administrator.
