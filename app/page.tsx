@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { FileUpload } from "@/components/file-upload"
 import { FileList } from "@/components/file-list"
 import { DataPreview } from "@/components/data-preview"
 import { AnalysisView } from "@/components/analysis-view"
-import { Upload, FileText } from "lucide-react"
+import { Upload, FileText, Loader2 } from "lucide-react"
 
 export type FileType = "workloads" | "labels" | "services" | "ip-lists" | "rulesets" | "label-groups"
 
@@ -17,14 +17,94 @@ export interface UploadedFile {
   size: number
   data: any[]
   uploadedAt: Date
+  version?: number
+  uploadId?: string
 }
 
 export default function Home() {
   const [activeSection, setActiveSection] = useState<"upload" | "preview" | "analysis">("upload")
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleFilesUploaded = (files: UploadedFile[]) => {
-    setUploadedFiles((prev) => [...prev, ...files])
+  useEffect(() => {
+    fetchDataFromMongoDB()
+  }, [])
+
+  const fetchDataFromMongoDB = async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const fileTypes: FileType[] = ["workloads", "labels", "services", "ip-lists", "rulesets", "label-groups"]
+      const fetchPromises = fileTypes.map(async (type) => {
+        const response = await fetch(`/api/data/${type}`)
+        if (!response.ok) throw new Error(`Failed to fetch ${type}`)
+        const result = await response.json()
+        if (result.data && result.data.length > 0) {
+          const versions = new Map<number, any[]>()
+          result.data.forEach((record: any) => {
+            const version = record._version || 1
+            if (!versions.has(version)) {
+              versions.set(version, [])
+            }
+            versions.get(version)!.push(record)
+          })
+
+          return Array.from(versions.entries()).map(([version, records]) => ({
+            id: `${type}_v${version}`,
+            name: records[0]._fileName || `${type}_v${version}.json`,
+            type,
+            size: JSON.stringify(records).length,
+            data: records,
+            uploadedAt: new Date(records[0]._uploadedAt),
+            version,
+          }))
+        }
+        return []
+      })
+
+      const results = await Promise.all(fetchPromises)
+      const allFiles = results.flat()
+      setUploadedFiles(allFiles)
+    } catch (err) {
+      console.error("[v0] Error fetching data:", err)
+      setError("Failed to load data from database")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleFilesUploaded = async (files: UploadedFile[]) => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const uploadPromises = files.map(async (file) => {
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileType: file.type,
+            data: file.data,
+            fileName: file.name,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error(`Failed to upload ${file.name}`)
+        }
+
+        const result = await response.json()
+        return { ...file, version: result.version, uploadId: result.uploadId }
+      })
+
+      const uploadedFilesWithMetadata = await Promise.all(uploadPromises)
+      setUploadedFiles((prev) => [...prev, ...uploadedFilesWithMetadata])
+    } catch (err) {
+      console.error("[v0] Error uploading files:", err)
+      setError("Failed to upload files to database")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleRemoveFile = (id: string) => {
@@ -58,7 +138,20 @@ export default function Home() {
         </div>
 
         <div className="p-8">
-          {activeSection === "upload" && (
+          {error && (
+            <div className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-md text-red-500 text-sm">
+              {error}
+            </div>
+          )}
+
+          {isLoading && (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <span className="ml-3 text-muted-foreground">Loading data...</span>
+            </div>
+          )}
+
+          {!isLoading && activeSection === "upload" && (
             <div className="space-y-6">
               <FileUpload onFilesUploaded={handleFilesUploaded} />
 
@@ -71,9 +164,11 @@ export default function Home() {
             </div>
           )}
 
-          {activeSection === "preview" && uploadedFiles.length > 0 && <DataPreview files={uploadedFiles} />}
+          {!isLoading && activeSection === "preview" && uploadedFiles.length > 0 && (
+            <DataPreview files={uploadedFiles} />
+          )}
 
-          {activeSection === "preview" && uploadedFiles.length === 0 && (
+          {!isLoading && activeSection === "preview" && uploadedFiles.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Upload className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-2">No files uploaded yet</h3>
@@ -87,9 +182,11 @@ export default function Home() {
             </div>
           )}
 
-          {activeSection === "analysis" && uploadedFiles.length > 0 && <AnalysisView files={uploadedFiles} />}
+          {!isLoading && activeSection === "analysis" && uploadedFiles.length > 0 && (
+            <AnalysisView files={uploadedFiles} />
+          )}
 
-          {activeSection === "analysis" && uploadedFiles.length === 0 && (
+          {!isLoading && activeSection === "analysis" && uploadedFiles.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <FileText className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-2">No data to analyze</h3>
