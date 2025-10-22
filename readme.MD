@@ -246,7 +246,8 @@ GET /api/versions
 
 ## Project Structure
 
-```illumio-pce-analyzer/
+```
+illumio-pce-analyzer/
 ├── app/
 │ ├── api/
 │ │ ├── upload/
@@ -274,7 +275,8 @@ GET /api/versions
 │ └── export-utils.ts # Export functionality
 ├── .env.example # Environment variable template
 ├── .env.local # Your local environment variables (create this)
-└── package.json # Dependencies and scripts```
+└── package.json # Dependencies and scripts
+```
 
 ## Troubleshooting
 
